@@ -1,0 +1,12 @@
+{
+    "name": "manadev/Mana_Filters",
+    "type": "magento-module",
+    "description": "",
+    "license": "",
+    "require": {
+        "magento-hackathon/magento-composer-installer": "*",
+        "manadev/Mana_Core": "*",
+        "manadev/Mana_Db": "*"
+    },
+    "minimum-stability": "dev"
+}
