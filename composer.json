@@ -1,8 +1,8 @@
 {
     "name": "manadev/Mana_Filters",
     "type": "magento-module",
-    "description": "",
-    "license": "",
+    "description": "Multiple select filter for Magento layered navigation",
+    "license": "OSL-3.0",
     "require": {
         "magento-hackathon/magento-composer-installer": "*",
         "manadev/Mana_Core": "*",
