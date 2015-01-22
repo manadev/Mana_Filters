@@ -111,7 +111,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
                 'range' => $rangeExpr,
                 'count' => $countExpr
             ));
-            $select->group($rangeExpr)->order("$rangeExpr ASC");
+            $select->group($rangeExpr)->order($rangeExpr,"ASC");
 
             Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
             $select->where("{$table}.min_price > 0");
