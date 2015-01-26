@@ -17,6 +17,9 @@ class Mana_Filters_Block_State extends Mage_Catalog_Block_Layer_State {
             foreach ($this->getActiveFilters() as $item) {
                 $query[$item->getFilter()->getRequestVar()] = $item->getFilter()->getResetValue();
             }
+            if ($this->coreHelper()->isSpecialPagesInstalled()) {
+                $query[$this->specialPageHelper()->getRequestVar()] = null;
+            }
             $params = array('_secure' => Mage::app()->getFrontController()->getRequest()->isSecure());
             $params['_current'] = true;
             $params['_use_rewrite'] = true;
@@ -62,4 +65,21 @@ class Mana_Filters_Block_State extends Mage_Catalog_Block_Layer_State {
         }
         return false;
     }
+
+    #region Dependencies
+
+    /**
+     * @return Mana_Core_Helper_Data
+     */
+    public function coreHelper() {
+        return Mage::helper('mana_core');
+    }
+
+    /**
+     * @return Mana_Page_Helper_Special
+     */
+    public function specialPageHelper() {
+        return Mage::helper('mana_page/special');
+    }
+    #endregion
 }

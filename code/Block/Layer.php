@@ -14,7 +14,7 @@ class Mana_Filters_Block_Layer extends Mage_Core_Block_Template {
     {
         $category = Mage::getModel('catalog/category')->load($id);
         if ($category->getId()) {
-            Mage::getSingleton('catalog/layer')->setCurrentCategory($category);
+            Mage::helper('mana_filters')->getLayer()->setCurrentCategory($category);
         }
     }
 }

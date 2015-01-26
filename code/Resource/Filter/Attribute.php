@@ -110,10 +110,10 @@ class Mana_Filters_Resource_Filter_Attribute
 
         $tableAlias = $attribute->getAttributeCode() . '_idx';
         $conditions = array(
-            "{$tableAlias}.entity_id = e.entity_id",
-            $connection->quoteInto("{$tableAlias}.attribute_id = ?", $attribute->getAttributeId()),
-            $connection->quoteInto("{$tableAlias}.store_id = ?", $collection->getStoreId()),
-            "{$tableAlias}.value in (" . implode(',', array_filter($value)) . ")"
+            "`{$tableAlias}`.entity_id = e.entity_id",
+            $connection->quoteInto("`{$tableAlias}`.attribute_id = ?", $attribute->getAttributeId()),
+            $connection->quoteInto("`{$tableAlias}`.store_id = ?", $collection->getStoreId()),
+            "`{$tableAlias}`.value in (" . implode(',', array_filter($value)) . ")"
         );
         $conditions = join(' AND ', $conditions);
         $collection->getSelect()

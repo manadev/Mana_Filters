@@ -33,7 +33,7 @@
     <?php else : ?>
         <li>
             <a href="<?php echo $_filter->getRemoveUrl() ?>" title="<?php echo $this->__('Remove This Item') ?>" class="btn-remove"><?php echo $this->__('Remove This Item') ?></a>
-            <span class="label"><?php echo $this->__($_filter->getName()) ?>:</span> <?php echo $_filter->getMShowSelected() ? $this->__('not') : '' ?> <?php echo $this->stripTags($_filter->getLabel()) ?>
+            <span class="label"><?php echo $this->__($_filter->getName()) ?>:</span> <?php echo $_filter->getMShowSelected() ? $this->__('not') : '' ?> <?php echo $this->escapeHtml($_filter->getLabel()) ?>
         </li>
     <?php endif; ?>
     <?php endforeach; ?>

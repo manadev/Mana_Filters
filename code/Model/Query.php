@@ -69,6 +69,9 @@ class Mana_Filters_Model_Query extends Varien_Object
     }
 
     public function apply() {
+        if ($this->coreHelper()->isSpecialPagesInstalled()) {
+            $this->specialPageHelper()->registerSpecialFilters($this);
+        }
         foreach ($this->_filters as $code => $filter) {
             if (!$filter['isApplyProcessed']) {
                 $model = $filter['model'];
@@ -89,6 +92,7 @@ class Mana_Filters_Model_Query extends Varien_Object
                 $this->_filters[$code]['isApplyProcessed'] = true;
             }
         }
+
         return $this;
     }
 
@@ -190,5 +194,18 @@ class Mana_Filters_Model_Query extends Varien_Object
         return Mage::helper('mana_filters');
     }
 
+    /**
+     * @return Mana_Core_Helper_Data
+     */
+    public function coreHelper() {
+        return Mage::helper('mana_core');
+    }
+
+    /**
+     * @return Mana_Page_Helper_Special
+     */
+    public function specialPageHelper() {
+        return Mage::helper('mana_page/special');
+    }
     #endregion
 }

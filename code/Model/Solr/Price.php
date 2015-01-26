@@ -59,10 +59,12 @@ class Mana_Filters_Model_Solr_Price extends Mana_Filters_Model_Filter_Price
         if (!empty($facets)) {
             foreach ($facets as $key => $value) {
                 preg_match('/TO ([\d\.]+)\]$/', $key, $rangeKey);
-                $rangeKey = $rangeKey[1] / $this->getPriceRange();
+                $rangeKey = $rangeKey[1] * $this->getCurrencyRate() / $this->getPriceRange();
                 $rangeKey = round($rangeKey);
-                /** @noinspection PhpIllegalArrayKeyTypeInspection */
-                $result[$rangeKey] = $value;
+                if ($value > 0) {
+                    /** @noinspection PhpIllegalArrayKeyTypeInspection */
+                    $result[$rangeKey] = $value;
+                }
             }
         }
         return $result;
@@ -82,8 +84,10 @@ class Mana_Filters_Model_Solr_Price extends Mana_Filters_Model_Filter_Price
             if (strpos($selection, ',') !== false) {
                 list($index, $range) = explode(',', $selection);
                 $range = $this->_getResource()->getPriceRange($index, $range);
+                $range['from'] /= $this->getCurrencyRate();
+                $range['to'] /= $this->getCurrencyRate();
                 $to = $range['to'];
-                if ($to < $this->getMaxPriceInt() && !$this->isUpperBoundInclusive()) {
+                if ($to < $this->getMaxPriceInt() / $this->getCurrencyRate() && !$this->isUpperBoundInclusive()) {
                     $to -= 0.001;
                 }
 

@@ -143,20 +143,7 @@ class Mana_Filters_Block_Filter extends Mage_Catalog_Block_Layer_Filter_Abstract
     }
 
     public function getListItemClass($item) {
-        $result = '';
-        if ($item->getMShowSelected()) {
-            $result .= 'm-selected-ln-item';
-        }
-        if (!($item->getCount() || $item->getMSelected())) {
-            if ($result) {
-                $result .= ' ';
-            }
-            $result .= 'm-disabled';
-        }
-        if ($result) {
-            $result = "class=\"$result\"";
-        }
-        return $result;
+        return Mage::helper('mana_filters')->getListItemClass($item);
     }
 
     #region Dependencies
