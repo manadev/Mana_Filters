@@ -119,9 +119,13 @@ class Mana_Filters_Model_Filter_Attribute
         $tags = $this->getLayer()->getStateTags($tags);
 
         $sortMethod = $this->getFilterOptions()->getSortMethod() ? $this->getFilterOptions()->getSortMethod() : 'byPosition';
-        foreach (array_keys($data) as $position => $key) {
-            $data[$key]['position'] = $position;
+        foreach (array_keys($data) as $position => $itemKey) {
+            $data[$itemKey]['position'] = $position;
         }
+        if ($this->_addSpecialOptionsToAllOptions()) {
+            $data = array_merge($data, Mage::helper('mana_filters')->getSpecialOptionData($this->getFilterOptions()->getCode()));
+        }
+
         usort($data, array(Mage::getSingleton('mana_filters/sort'), $sortMethod));
 
         $this->getLayer()->getAggregator()->saveCacheData($data, $key, $tags);
@@ -303,6 +307,10 @@ class Mana_Filters_Model_Filter_Attribute
 
     public function getRemoveUrl()
     {
+        if ($this->coreHelper()->isSpecialPagesInstalled() && $this->specialPageHelper()->isAppliedInFilter($this->getRequestVar())) {
+            return $this->specialPageHelper()->getClearFilterUrl($this->getRequestVar());
+        }
+
         $query = array($this->getRequestVar() => $this->getResetValue());
         if ($this->coreHelper()->isManadevDependentFilterInstalled()) {
             $query = $this->dependentHelper()->removeDependentFiltersFromUrl($query, $this->getRequestVar());
@@ -343,6 +351,11 @@ class Mana_Filters_Model_Filter_Attribute
         return $values ? array_filter(explode('_', $values)) : array();
     }
     #endregion
+
+    protected function _addSpecialOptionsToAllOptions() {
+        return true;
+    }
+
     #region Dependencies
 
     /**
@@ -364,6 +377,13 @@ class Mana_Filters_Model_Filter_Attribute
      */
     public function itemHelper() {
         return Mage::helper('mana_filters/item');
+    }
+
+    /**
+     * @return Mana_Page_Helper_Special
+     */
+    public function specialPageHelper() {
+        return Mage::helper('mana_page/special');
     }
     #endregion
 }

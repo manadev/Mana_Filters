@@ -15,6 +15,8 @@ class Mana_Filters_Model_Filter_Category
     extends Mage_Catalog_Model_Layer_Filter_Category
     implements Mana_Filters_Interface_Filter
 {
+    const GET_ALL_CHILDREN_RECURSIVELY = 'recursive';
+    const GET_ALL_DIRECT_CHILDREN = 'direct';
     #region Category Specific logic
     protected $_countedCategories;
 
@@ -22,7 +24,7 @@ class Mana_Filters_Model_Filter_Category
     public function getCountedCategories() {
         if (!$this->_countedCategories) {
             $category = $this->isApplied() ? $this->getAppliedCategory() : $this->getCategory();
-            $this->_countedCategories = $category->getChildrenCategories();
+            $this->_countedCategories = $this->getChildrenCollection($category, self::GET_ALL_DIRECT_CHILDREN);
         }
         return $this->_countedCategories;
     }
@@ -334,6 +336,57 @@ class Mana_Filters_Model_Filter_Category
         }
 
         return null;
+    }
+
+    public function getChildrenCollection($category, $mode) {
+
+        /* @var $resource Mage_Catalog_Model_Resource_Eav_Mysql4_Category */
+        $resource = $category->getResource();
+
+        $categoryIds = array();
+        switch ($mode) {
+            case self::GET_ALL_CHILDREN_RECURSIVELY:
+                $categoryIds = $resource->getChildren($category, true);
+                break;
+            case self::GET_ALL_DIRECT_CHILDREN:
+                $categoryIds = $resource->getChildren($category, false);
+                break;
+        }
+
+        $collection = $category->getCollection();
+
+        /* @var $_conn Varien_Db_Adapter_Pdo_Mysql */
+        $_conn = $collection->getConnection();
+
+        /* @var $collection Mage_Catalog_Model_Resource_Eav_Mysql4_Category_Collection */
+        if (Mage::helper('catalog/category_flat')->isEnabled()) {
+            $storeId = $category->getStoreId();
+            $collection->getSelect()
+                ->reset(Zend_Db_Select::COLUMNS)
+                ->columns('main_table.*')
+                ->joinLeft(
+                    array('url_rewrite' => $collection->getTable('core/url_rewrite')),
+                        'url_rewrite.category_id=main_table.entity_id AND url_rewrite.is_system=1 AND ' .
+                                $_conn->quoteInto(
+                                    'url_rewrite.product_id IS NULL AND url_rewrite.store_id=? AND url_rewrite.id_path LIKE "category/%"',
+                                    $storeId),
+                    array('request_path' => 'url_rewrite.request_path'));
+        }
+        else {
+            $collection
+                ->addAttributeToSelect('url_key')
+                ->addAttributeToSelect('name')
+                ->addAttributeToSelect('all_children')
+                ->addAttributeToSelect('is_anchor')
+                ->joinUrlRewrite();
+        }
+        $collection
+            ->addAttributeToFilter('is_active', 1)
+            ->addIdFilter($categoryIds)
+            ->setOrder('position', 'ASC')
+            ->load();
+
+        return $collection;
     }
 
     #region Dependencies

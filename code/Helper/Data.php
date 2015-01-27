@@ -133,6 +133,9 @@ class Mana_Filters_Helper_Data extends Mana_Core_Helper_Layer {
         foreach ($this->getLayer()->getState()->getFilters() as $item) {
             $filterState[$item->getFilter()->getRequestVar()] = $item->getFilter()->getCleanValue();
         }
+        if ($this->coreHelper()->isSpecialPagesInstalled()) {
+            $filterState[$this->specialPageHelper()->getRequestVar()] = null;
+        }
         if ($clearListParams) {
             $filterState = array_merge($filterState, array(
               'dir' => null,
@@ -437,7 +440,7 @@ class Mana_Filters_Helper_Data extends Mana_Core_Helper_Layer {
             foreach ($filterCollection as $filter) {
                 /* @var $filter Mana_Filters_Model_Filter2_Store */
                 if ($filter->getType() == 'category') {
-                    if ($filter->getData('display') == 'tree') {
+                    if ($filter->getData('display') == 'tree' || $filter->getData('display') == 'subtree') {
                         return true;
                     }
                 }
@@ -453,6 +456,33 @@ class Mana_Filters_Helper_Data extends Mana_Core_Helper_Layer {
         );
     }
 
+    public function getSpecialOptionData($code) {
+        if ($this->coreHelper()->isSpecialPagesInstalled()) {
+            $data = $this->specialPageHelper()->getOptionData($code);
+            usort($data, array(Mage::getSingleton('mana_filters/sort'), 'byPosition'));
+            return $data;
+        }
+        else {
+            return array();
+        }
+    }
+
+    public function getListItemClass($item) {
+        $result = '';
+        if ($item->getMShowSelected()) {
+            $result .= 'm-selected-ln-item';
+        }
+        if (!($item->getCount() || $item->getMSelected())) {
+            if ($result) {
+                $result .= ' ';
+            }
+            $result .= 'm-disabled';
+        }
+        if ($result) {
+            $result = "class=\"$result\"";
+        }
+        return $result;
+    }
 
     #region Dependencies
 
@@ -463,5 +493,11 @@ class Mana_Filters_Helper_Data extends Mana_Core_Helper_Layer {
         return Mage::helper('mana_core');
     }
 
+    /**
+     * @return Mana_Page_Helper_Special
+     */
+    public function specialPageHelper() {
+        return Mage::helper('mana_page/special');
+    }
     #endregion
 }

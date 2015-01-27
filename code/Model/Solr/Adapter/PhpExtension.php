@@ -83,4 +83,16 @@ class Mana_Filters_Model_Solr_Adapter_PhpExtension extends Enterprise_Search_Mod
         }
         return $result;
     }
+    function _prepareSortFields($sortBy) {
+        $unsetCurrentCategory = false;
+        if (!Mage::registry('current_category')) {
+            $unsetCurrentCategory = true;
+            Mage::register('current_category', Mage::helper('mana_core')->getRootCategory());
+        }
+        $result = parent::_prepareSortFields($sortBy);
+        if ($unsetCurrentCategory) {
+            Mage::unregister('current_category');
+        }
+        return $result;
+    }
 }

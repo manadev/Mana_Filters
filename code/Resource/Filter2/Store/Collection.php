@@ -64,6 +64,11 @@ class Mana_Filters_Resource_Filter2_Store_Collection extends Mana_Filters_Resour
         return $this;
     }
 
+    public function addColorsFilter() {
+        $this->getSelect()->where("`main_table`.`display` LIKE ?", 'colors%');
+        return $this;
+    }
+
     #region Dependencies
 
     /**

@@ -34,7 +34,7 @@ class Mana_Filters_Resource_Item extends Mage_Core_Model_Mysql4_Abstract {
         $attribute = $filter->getAttributeModel();
 
         $selectedOptionIds = $filter->getMSelectedValues();
-        $isSelectedExpr = count($selectedOptionIds) ? "`eav`.`value` IN (" . implode(', ', $selectedOptionIds). ")" : "NULL";
+        $isSelectedExpr = count($selectedOptionIds) ? "`eav`.`value` IN (" . implode(', ', $selectedOptionIds). ")" : "1 <> 1";
 
         $fields = array(
             'sort_order' => new Zend_Db_Expr("`o`.`sort_order`"),
