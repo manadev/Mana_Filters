@@ -113,7 +113,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
             ));
             $select->group($rangeExpr)->order($rangeExpr);
 
-            Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
+            //Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
             $select->where("{$table}.min_price > 0");
 
 //Mage::log($select->__toString(), Zend_Log::DEBUG, 'price.log' );
