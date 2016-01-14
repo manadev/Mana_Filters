@@ -39,14 +39,27 @@ class Mana_Filters_Helper_Item extends Mana_Core_Helper_Layer {
         return $this->_resources;
     }
 
+    protected function _prepareArraysForCurrentStore() {
+        $storeId = Mage::app()->getStore()->getId();
+        if (!isset($this->_attributeItems[$storeId])) {
+            $this->_attributeItems[$storeId] = array();
+        }
+        if (!isset($this->_allItems[$storeId])) {
+            $this->_allItems[$storeId] = array();
+        }
+        return $storeId;
+    }
+
     /**
      * @param Mana_Filters_Model_Filter_Attribute $filter
      * @param Mana_Filters_Model_Item[] $items
      */
     public function registerItems($filter, $items) {
         if ($this->isEnabled()) {
-            $this->_attributeItems[$filter->getAttributeModel()->getId()] = $items;
-            $this->_allItems += $items;
+            $storeId = $this->_prepareArraysForCurrentStore();
+
+            $this->_attributeItems[$storeId][$filter->getAttributeModel()->getId()] = $items;
+            $this->_allItems[$storeId] += $items;
         }
     }
 
@@ -90,7 +103,9 @@ class Mana_Filters_Helper_Item extends Mana_Core_Helper_Layer {
      * @return array|bool
      */
     public function getAttributeItems($attributeId) {
-        return isset($this->_attributeItems[$attributeId]) ? $this->_attributeItems[$attributeId] : false;
+        $storeId = $this->_prepareArraysForCurrentStore();
+
+        return isset($this->_attributeItems[$storeId][$attributeId]) ? $this->_attributeItems[$storeId][$attributeId] : false;
     }
 
     /**
@@ -98,7 +113,9 @@ class Mana_Filters_Helper_Item extends Mana_Core_Helper_Layer {
      * @return Mana_Filters_Model_Item|bool
      */
     public function get($optionId) {
-        return isset($this->_allItems[$optionId]) ? $this->_allItems[$optionId] : false;
+        $storeId = $this->_prepareArraysForCurrentStore();
+
+        return isset($this->_allItems[$storeId][$optionId]) ? $this->_allItems[$storeId][$optionId] : false;
     }
 
     #region Dependencies

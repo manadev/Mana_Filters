@@ -26,6 +26,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
         $collection->addPriceData($filter->getCustomerGroupId(), $filter->getWebsiteId());
 
         $select = clone $collection->getSelect();
+        //$sql = $select->__toString();
 
         // reset columns, order and limitation conditions
         $select->reset(Zend_Db_Select::COLUMNS);
@@ -43,6 +44,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
         }
 
         // processing FROM part
+        $oldMainFromClause = $fromPart[Mage_Catalog_Model_Resource_Product_Collection::MAIN_TABLE_ALIAS];
         $priceIndexJoinPart = $fromPart[Mage_Catalog_Model_Resource_Product_Collection::INDEX_TABLE_ALIAS];
         $priceIndexJoinConditions = explode('AND', $priceIndexJoinPart['joinCondition']);
         $priceIndexJoinPart['joinType'] = Zend_Db_Select::FROM;
@@ -57,6 +59,9 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
 
         // processing WHERE part
         $wherePart = $select->getPart(Zend_Db_Select::WHERE);
+        foreach ($wherePart as $key => $wherePartItem) {
+            $wherePart[$key] = $this->_replaceProductTableAlias($select, $wherePartItem, $oldMainFromClause);
+        }
         foreach ($wherePart as $key => $wherePartItem) {
             $wherePart[$key] = $this->_replaceTableAlias($wherePartItem);
         }
@@ -219,7 +224,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
 
         //Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
         $select->columns(array($maxPriceExpr))->order('m_max_price DESC');
-
+        //$sql = ((string)$select);
         $result  = $connection->fetchOne($select) * $filter->getCurrencyRate();
 //        Mage::log('MAX select: ' . ((string)$select), Zend_Log::DEBUG, 'price.log');
 //        Mage::log("MAX result: $result", Zend_Log::DEBUG, 'price.log');
@@ -300,6 +305,65 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
         $this->_preparedExpressions[] = compact('select', 'result');
 
         return $result;
+    }
+
+    /**
+     * @param Varien_Db_Select $select
+     * @param $conditionString
+     * @return mixed|null
+     */
+    protected function _replaceProductTableAlias($select, $conditionString, $oldMainFromClause) {
+        if (is_null($conditionString)) {
+            return null;
+        }
+        $adapter = $this->_getReadAdapter();
+        if (strpos($conditionString, 'e.') === false) {
+            return $conditionString;
+        }
+
+        $fromPart = $select->getPart(Zend_Db_Select::FROM);
+        if (!isset($fromPart['main_table'])) {
+            $select->join(array('main_table' => $oldMainFromClause['tableName']), "`e`.`entity_id` = `main_table`.`entity_id`", null);
+        }
+        $oldAlias = array(
+            'e' . '.',
+            $adapter->quoteIdentifier('e') . '.',
+        );
+        $newAlias = array(
+            'main_table' . '.',
+            $adapter->quoteIdentifier('main_table') . '.',
+        );
+        return $this->_replaceAliasExpr($oldAlias, $newAlias, $conditionString);
+    }
+
+    protected function _replaceAliasExpr($old, $new, $expr) {
+        if (is_array($old)) {
+            $result = $expr;
+            foreach (array_keys($old) as $index) {
+                $result = $this->_replaceAliasExpr($old[$index], $new[$index], $result);
+            }
+            return $result;
+        }
+        else {
+            $pattern = '/^(' . preg_quote($old) . ')|[^A-Za-z_0-9](' . preg_quote($old) . ')/';
+            $offset = 0;
+            $result = '';
+            while(preg_match($pattern, $expr, $matches, PREG_OFFSET_CAPTURE, $offset)) {
+                $match = $matches[1][0] ? $matches[1] : $matches[2];
+                $strFound = $match[0];
+                $offsetFound = $match[1];
+                if ($offsetFound > $offset) {
+                    $result .= substr($expr, $offset, $offsetFound - $offset);
+                }
+                $result .= $new;
+                $offset = $offsetFound + strlen($strFound);
+            }
+            if (strlen($expr) > $offset) {
+                $result .= substr($expr, $offset);
+            }
+            return $result;
+
+        }
     }
 
 }

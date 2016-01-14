@@ -33,6 +33,18 @@ class Mana_Filters_Resource_Item extends Mage_Core_Model_Mysql4_Abstract {
         $db = $this->_getReadAdapter();
         $attribute = $filter->getAttributeModel();
 
+        $select
+            ->joinInner(array('eav' => $this->getTable('catalog/product_index_eav')),
+                "`eav`.`entity_id` = `e`.`entity_id` AND
+                {$db->quoteInto("`eav`.`attribute_id` = ?", $attribute->getAttributeId())} AND
+                {$db->quoteInto("`eav`.`store_id` = ?", $filter->getStoreId())}",
+                array(
+                    'count' => new Zend_Db_Expr("COUNT(DISTINCT `eav`.`entity_id`)"),
+                    'value' => new Zend_Db_Expr("`eav`.`value`")
+                )
+            )
+            ->group(new Zend_Db_Expr("`eav`.`value`"));
+
         $selectedOptionIds = $filter->getMSelectedValues();
         $isSelectedExpr = count($selectedOptionIds) ? "`eav`.`value` IN (" . implode(', ', $selectedOptionIds). ")" : "1 <> 1";
 
@@ -45,24 +57,19 @@ class Mana_Filters_Resource_Item extends Mage_Core_Model_Mysql4_Abstract {
                 ? "NOT ($isSelectedExpr)"
                 : $isSelectedExpr),
         );
-        $select
-            ->joinInner(array('eav' => $this->getTable('catalog/product_index_eav')),
-                "`eav`.`entity_id` = `e`.`entity_id` AND
-                {$db->quoteInto("`eav`.`attribute_id` = ?", $attribute->getAttributeId())} AND
-                {$db->quoteInto("`eav`.`store_id` = ?", $filter->getStoreId())}",
-                array('count' => "COUNT(DISTINCT `eav`.`entity_id`)")
-            )
+        $itemSelect = $db->select()
+            ->from(array('eav' => $select), array('count' => new Zend_Db_Expr("`eav`.`count`")))
             ->joinInner(array('o' => $this->getTable('eav/attribute_option')),
                 "`o`.`option_id` = `eav`.`value`", null)
             ->joinInner(array('vg' => $this->getTable('eav/attribute_option_value')),
                 $db->quoteInto("`vg`.`option_id` = `eav`.`value` AND `vg`.`store_id` = ?", 0), null)
             ->joinLeft(array('vs' => $this->getTable('eav/attribute_option_value')),
                 $db->quoteInto("`vs`.`option_id` = `eav`.`value` AND `vs`.`store_id` = ?", $filter->getStoreId()), null)
-            ->columns($fields)
-            ->group($fields);
+            ->columns($fields);
 
-        //$sql = $select->__toString();
-        return $select;
+        $sql = $select->__toString();
+        $sql = $itemSelect->__toString();
+        return $itemSelect;
 
     }
 

@@ -330,6 +330,10 @@ class Mana_Filters_Model_Filter_Decimal
 
     public function getRange()
     {
+        if ($this->hasData('range')) {
+            return $this->getData('range');
+        }
+
         $range = $this->getData('range');
 
         $value = $this->getMSelectedValues();

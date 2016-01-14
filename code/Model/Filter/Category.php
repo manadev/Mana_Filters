@@ -17,6 +17,7 @@ class Mana_Filters_Model_Filter_Category
 {
     const GET_ALL_CHILDREN_RECURSIVELY = 'recursive';
     const GET_ALL_DIRECT_CHILDREN = 'direct';
+    const GET_ALL_PARENTS = 'parents';
     #region Category Specific logic
     protected $_countedCategories;
 
@@ -67,7 +68,7 @@ class Mana_Filters_Model_Filter_Category
                 	'label' => Mage::helper('core')->htmlEscape($category->getName()),
                     'value' => $category->getId(),
                     'count' => $category->getProductCount(),
-            		'm_selected' => $category->getId() == $this->getCategory()->getId()
+            		'm_selected' => $category->getId() == ($this->isApplied() ? $this->getAppliedCategory()->getId() : $this->getCategory()->getId())
                 );
             }
         }
@@ -338,6 +339,15 @@ class Mana_Filters_Model_Filter_Category
         return null;
     }
 
+    /**
+     * @param Varien_Db_Select $select
+     */
+    protected function getMainAlias($select) {
+        $from = $select->getPart(Varien_Db_Select::FROM);
+        $aliases = array_keys($from);
+        return $aliases[0];
+    }
+
     public function getChildrenCollection($category, $mode) {
 
         /* @var $resource Mage_Catalog_Model_Resource_Eav_Mysql4_Category */
@@ -351,28 +361,34 @@ class Mana_Filters_Model_Filter_Category
             case self::GET_ALL_DIRECT_CHILDREN:
                 $categoryIds = $resource->getChildren($category, false);
                 break;
+            case self::GET_ALL_PARENTS:
+                $categoryIds = array_filter(explode(',', $category->getPathInStore()));
+                break;
         }
 
         $collection = $category->getCollection();
+        $alias = $this->getMainAlias($collection->getSelect());
 
         /* @var $_conn Varien_Db_Adapter_Pdo_Mysql */
         $_conn = $collection->getConnection();
 
         /* @var $collection Mage_Catalog_Model_Resource_Eav_Mysql4_Category_Collection */
         if (Mage::helper('catalog/category_flat')->isEnabled()) {
+//            $alias = 'main_table';
             $storeId = $category->getStoreId();
             $collection->getSelect()
                 ->reset(Zend_Db_Select::COLUMNS)
-                ->columns('main_table.*')
+                ->columns($alias . '.*')
                 ->joinLeft(
                     array('url_rewrite' => $collection->getTable('core/url_rewrite')),
-                        'url_rewrite.category_id=main_table.entity_id AND url_rewrite.is_system=1 AND ' .
+                        'url_rewrite.category_id=' . $alias . '.entity_id AND url_rewrite.is_system=1 AND ' .
                                 $_conn->quoteInto(
                                     'url_rewrite.product_id IS NULL AND url_rewrite.store_id=? AND url_rewrite.id_path LIKE "category/%"',
                                     $storeId),
                     array('request_path' => 'url_rewrite.request_path'));
         }
         else {
+//            $alias = 'e';
             $collection
                 ->addAttributeToSelect('url_key')
                 ->addAttributeToSelect('name')
@@ -380,9 +396,48 @@ class Mana_Filters_Model_Filter_Category
                 ->addAttributeToSelect('is_anchor')
                 ->joinUrlRewrite();
         }
+
+        if ($this->coreHelper()->isManadevPaidLayeredNavigationInstalled()) {
+            if ($this->flatHelper()->isEnabled() && $this->flatHelper()->isRebuilt() &&
+                !$this->dbHelper()->indexRequiresReindexing('catalog_category_flat'))
+            {
+                $collection->addAttributeToFilter('m_show_in_layered_navigation', 1);
+            }
+            else {
+                $res = Mage::getSingleton('core/resource');
+                $showInLayeredNavigationTable = $res->getTableName('catalog_category_entity_int');
+                $db = $collection->getConnection();
+
+                $attributeSelect = $db->select()
+                    ->from(array('a' => $res->getTableName('eav/attribute')), 'attribute_id')
+                    ->join(array('t' => $res->getTableName('eav/entity_type')),
+                        $db->quoteInto("`t`.`entity_type_id` = `a`.`entity_type_id`
+                            AND `t`.`entity_type_code` = ?", 'catalog_category'), null)
+                    ->where("`a`.`attribute_code` = ?", 'm_show_in_layered_navigation');
+                $attributeId = $db->fetchOne($attributeSelect);
+
+                $storeId = Mage::app()->getStore()->getId();
+                $collection->getSelect()
+                    ->joinLeft(array('m_siln_g' => $showInLayeredNavigationTable),
+                        "`m_siln_g`.`entity_id` = `$alias`.`entity_id`
+                            AND `m_siln_g`.`attribute_id` = $attributeId
+                            AND `m_siln_g`.`store_id` = 0", null)
+                    ->joinLeft(array('m_siln_s' => $showInLayeredNavigationTable),
+                        "`m_siln_s`.`entity_id` = `$alias`.`entity_id`
+                            AND `m_siln_s`.`attribute_id` = $attributeId
+                            AND `m_siln_s`.`store_id` = $storeId", null)
+                    ->where("COALESCE(`m_siln_s`.`value`, `m_siln_g`.`value`) = 1");
+            }
+        }
+
+        if (count($categoryIds)) {
+            $collection->getSelect()->where("`$alias`.`entity_id` IN (" . implode(', ', $categoryIds) . ")");
+        }
+        else {
+            $collection->getSelect()->where("1 <> 1");
+        }
         $collection
             ->addAttributeToFilter('is_active', 1)
-            ->addIdFilter($categoryIds)
             ->setOrder('position', 'ASC')
             ->load();
 
@@ -412,5 +467,18 @@ class Mana_Filters_Model_Filter_Category
         return Mage::helper('manapro_filterdependent');
     }
 
+    /**
+     * @return Mage_Catalog_Helper_Category_Flat
+     */
+    public function flatHelper() {
+        return Mage::helper('catalog/category_flat');
+    }
+
+    /**
+     * @return Mana_Core_Helper_Db
+     */
+    public function dbHelper() {
+        return Mage::helper('mana_core/db');
+    }
     #endregion
 }
