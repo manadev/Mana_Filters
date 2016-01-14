@@ -217,7 +217,7 @@ class Mana_Filters_Resource_Filter_Price extends Mage_Catalog_Model_Resource_Eav
             $maxPriceExpr = new Zend_Db_Expr("MAX({$table}.min_price {$additional} {$fix}) AS m_max_price");
         }
 
-        //Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
+        Mage::helper('mana_filters')->resetProductCollectionWhereClause($select);
         $select->columns(array($maxPriceExpr))->order('m_max_price DESC');
 
         $result  = $connection->fetchOne($select) * $filter->getCurrencyRate();
