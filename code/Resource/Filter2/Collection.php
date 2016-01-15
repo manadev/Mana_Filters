@@ -27,4 +27,16 @@ class Mana_Filters_Resource_Filter2_Collection extends Mana_Db_Resource_Object_C
         $this->addFieldToFilter('code', array('in' => $codes));
         return $this;
     }
+
+    protected function _initSelect()
+    {
+        $this->getSelect()
+            ->from(array('main_table' => $this->getMainTable()))
+            ->joinLeft(array('ea' => $this->getTable('eav/attribute')), "`ea`.`attribute_code` = `main_table`.`code` AND `ea`.`attribute_code` <> 'category'", null)
+            ->joinLeft(array('et' => $this->getTable('eav/entity_type')),
+                "`et`.`entity_type_id` = `ea`.`entity_type_id` AND `et`.`entity_type_code` = 'catalog_product'", null)
+            ->joinLeft(array('ca' => $this->getTable('catalog/eav_attribute')), "`ca`.`attribute_id` = `ea`.`attribute_id`", null)
+            ->where("`main_table`.`type` = 'category' OR (`et`.`entity_type_id` IS NOT NULL AND `ca`.`is_filterable` <> 0)");
+        return $this;
+    }
 }
